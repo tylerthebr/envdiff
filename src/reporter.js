@@ -1,47 +1,50 @@
-const chalk = require('chalk');
+// reporter.js — prints the comparison report using formatter helpers
+
+const {
+  formatMissingKey,
+  formatMismatchedKey,
+  formatOkKey,
+  formatHeader,
+  formatSummary,
+} = require('./formatter');
 
 /**
- * Prints a human-readable colored diff report to stdout.
- * @param {Object} diff - Result from compareEnvs
+ * @param {object} report - output from compareEnvs
+ * @param {string[]} envNames - ordered list of env file names
+ * @param {object} options - { showOk: boolean }
  */
-function printReport(diff) {
-  const { baseName, targetName, missingInTarget, missingInBase, mismatched, hasDiff } = diff;
+function printReport(report, envNames, options = {}) {
+  const { showOk = false } = options;
+  const lines = [];
 
-  console.log(chalk.bold(`\nComparing ${chalk.cyan(baseName)} → ${chalk.cyan(targetName)}\n`));
+  lines.push(formatHeader(`Comparing ${envNames.join(' vs ')}:`));
 
-  if (!hasDiff) {
-    console.log(chalk.green('✔ No differences found. Envs are in sync.\n'));
-    return;
-  }
+  let missingCount = 0;
+  let mismatchedCount = 0;
+  let okCount = 0;
 
-  if (missingInTarget.length > 0) {
-    console.log(chalk.red(`✖ Keys in [${baseName}] missing from [${targetName}]:`));
-    for (const key of missingInTarget) {
-      console.log(chalk.red(`  - ${key}`));
+  for (const [key, info] of Object.entries(report)) {
+    if (info.status === 'missing') {
+      for (const envName of info.missingIn) {
+        lines.push(formatMissingKey(key, envName));
+        missingCount++;
+      }
+    } else if (info.status === 'mismatch') {
+      lines.push(formatMismatchedKey(key, info.values));
+      mismatchedCount++;
+    } else if (info.status === 'ok') {
+      okCount++;
+      if (showOk) {
+        lines.push(formatOkKey(key));
+      }
     }
-    console.log();
   }
 
-  if (missingInBase.length > 0) {
-    console.log(chalk.yellow(`⚠ Extra keys in [${targetName}] not in [${baseName}]:`));
-    for (const key of missingInBase) {
-      console.log(chalk.yellow(`  + ${key}`));
-    }
-    console.log();
-  }
+  lines.push(formatSummary(missingCount, mismatchedCount, okCount));
 
-  if (mismatched.length > 0) {
-    console.log(chalk.magenta('~ Mismatched values:'));
-    for (const entry of mismatched) {
-      console.log(chalk.magenta(`  ${entry.key}:`));
-      console.log(chalk.red(`    [${baseName}]: ${entry[baseName] ?? '(empty)'}`)  );
-      console.log(chalk.green(`    [${targetName}]: ${entry[targetName] ?? '(empty)'}`)  );
-    }
-    console.log();
-  }
+  console.log(lines.join('\n'));
 
-  const total = missingInTarget.length + missingInBase.length + mismatched.length;
-  console.log(chalk.bold.red(`${total} issue(s) found.\n`));
+  return { missingCount, mismatchedCount, okCount };
 }
 
 module.exports = { printReport };
