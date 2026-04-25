@@ -16,6 +16,7 @@ function sortByKey(entries) {
 
 /**
  * Sort entries by status: missing first, then mismatched, then ok.
+ * Within each status group, entries are sorted alphabetically by key.
  * @param {Array} entries
  * @returns {Array}
  */
@@ -38,6 +39,9 @@ function sortByStatus(entries) {
 function sortEntries(entries, order = 'key') {
   if (!Array.isArray(entries)) {
     throw new TypeError('entries must be an array');
+  }
+  if (typeof order !== 'string') {
+    throw new TypeError(`sort order must be a string, got: ${typeof order}`);
   }
   if (!SORT_ORDERS.includes(order)) {
     throw new Error(`Unknown sort order: "${order}". Must be one of: ${SORT_ORDERS.join(', ')}`);
