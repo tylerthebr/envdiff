@@ -58,7 +58,14 @@ function runExport(report, format, outputPath) {
 
   if (outputPath) {
     const resolved = path.resolve(outputPath);
-    fs.writeFileSync(resolved, content, 'utf8');
+    try {
+      fs.writeFileSync(resolved, content, 'utf8');
+    } catch (err) {
+      process.stderr.write(
+        `[envdiff] Failed to write report to "${resolved}": ${err.message}\n`
+      );
+      process.exit(1);
+    }
     process.stdout.write(`[envdiff] Report written to ${resolved}\n`);
   } else {
     process.stdout.write(content + '\n');
