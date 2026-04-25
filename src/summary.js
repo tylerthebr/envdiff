@@ -1,65 +1,53 @@
 /**
- * summary.js
- * Generates a summary report of comparison results.
- * Provides counts and percentages for each status category.
+ * Counts entries grouped by their status.
+ * @param {Array<{key: string, status: string}>} entries
+ * @returns {{ ok: number, missing: number, mismatch: number }}
  */
-
-/**
- * Counts entries by status from a comparison result map.
- * @param {Object} comparisonResult - Map of key -> { status, ... } from compareEnvs
- * @returns {{ total: number, ok: number, missing: number, mismatched: number }}
- */
-function countByStatus(comparisonResult) {
-  const counts = { total: 0, ok: 0, missing: 0, mismatched: 0 };
-
-  for (const entry of Object.values(comparisonResult)) {
-    counts.total++;
-    if (entry.status === 'ok') counts.ok++;
-    else if (entry.status === 'missing') counts.missing++;
-    else if (entry.status === 'mismatched') counts.mismatched++;
+export function countByStatus(entries) {
+  const counts = { ok: 0, missing: 0, mismatch: 0 };
+  for (const entry of entries) {
+    if (entry.status in counts) {
+      counts[entry.status]++;
+    }
   }
-
   return counts;
 }
 
 /**
- * Calculates percentage, returning 0 if total is 0.
+ * Formats a percentage string with one decimal place.
  * @param {number} part
  * @param {number} total
- * @returns {number}
- */
-function pct(part, total) {
-  if (total === 0) return 0;
-  return Math.round((part / total) * 100);
-}
-
-/**
- * Builds a human-readable summary string from comparison results.
- * @param {Object} comparisonResult - Output from compareEnvs
  * @returns {string}
  */
-function buildSummary(comparisonResult) {
-  const { total, ok, missing, mismatched } = countByStatus(comparisonResult);
-
-  const lines = [
-    `Summary: ${total} key(s) checked`,
-    `  OK:         ${ok} (${pct(ok, total)}%)`,
-    `  Missing:    ${missing} (${pct(missing, total)}%)`,
-    `  Mismatched: ${mismatched} (${pct(mismatched, total)}%)`,
-  ];
-
-  return lines.join('\n');
+export function pct(part, total) {
+  if (total === 0) return '0.0%';
+  return `${((part / total) * 100).toFixed(1)}%`;
 }
 
 /**
- * Returns true if there are any issues (missing or mismatched keys).
- * Useful for setting a non-zero exit code in CI pipelines.
- * @param {Object} comparisonResult
- * @returns {boolean}
+ * Builds a full summary object from a list of comparison entries.
+ * @param {Array<{key: string, status: string}>} entries
+ * @returns {object}
  */
-function hasIssues(comparisonResult) {
-  const { missing, mismatched } = countByStatus(comparisonResult);
-  return missing > 0 || mismatched > 0;
+export function buildSummary(entries) {
+  const total = entries.length;
+  const { ok, missing, mismatch } = countByStatus(entries);
+  return {
+    total,
+    ok,
+    missing,
+    mismatch,
+    okPct: pct(ok, total),
+    missingPct: pct(missing, total),
+    mismatchPct: pct(mismatch, total),
+  };
 }
 
-module.exports = { countByStatus, buildSummary, hasIssues };
+/**
+ * Returns true if the summary contains any issues (missing or mismatched keys).
+ * @param {{ missing: number, mismatch: number }} summary
+ * @returns {boolean}
+ */
+export function hasIssues(summary) {
+  return summary.missing > 0 || summary.mismatch > 0;
+}
