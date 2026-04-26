@@ -23,6 +23,9 @@ describe('classifyValue', () => {
   it('falls back to string', () => {
     expect(classifyValue('hello world')).toBe('string');
   });
+  it('returns empty for whitespace-only string', () => {
+    expect(classifyValue('   ')).toBe('empty');
+  });
 });
 
 describe('inspectEntry', () => {
@@ -42,6 +45,12 @@ describe('inspectEntry', () => {
     const result = inspectEntry('VALID_KEY', 'value');
     expect(Array.isArray(result.warnings)).toBe(true);
   });
+
+  it('includes key and value in result', () => {
+    const result = inspectEntry('MY_KEY', 'my_value');
+    expect(result.key).toBe('MY_KEY');
+    expect(result.value).toBe('my_value');
+  });
 });
 
 describe('inspectEnv', () => {
@@ -53,6 +62,13 @@ describe('inspectEnv', () => {
     expect(stats.empty).toBe(1);
     expect(stats.sensitive).toBeGreaterThanOrEqual(1);
     expect(stats.types['integer']).toBe(1);
+  });
+
+  it('handles empty object', () => {
+    const { entries, stats } = inspectEnv({});
+    expect(entries).toHaveLength(0);
+    expect(stats.total).toBe(0);
+    expect(stats.empty).toBe(0);
   });
 });
 
